@@ -5,13 +5,19 @@ Deploy to Railway/Render and access from any device.
 """
 
 import json
+import os
 import sqlite3
 from datetime import datetime
 from openai import OpenAI
 import gradio as gr
 
 # Initialize
-client = OpenAI()  # Set OPENAI_API_KEY env var
+# Supports any OpenAI-compatible API (OpenRouter, Together, Ollama, LM Studio, etc.)
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY", ""),
+    base_url=os.getenv("OPENAI_BASE_URL"),  # None uses default OpenAI URL
+)
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 DB_PATH = "personal.db"
 
 def get_connection():
@@ -219,15 +225,14 @@ def chat(message: str, history: list) -> str:
     messages = [{"role": "system", "content": system}]
     
     # Add conversation history
-    for user_msg, assistant_msg in history:
-        messages.append({"role": "user", "content": user_msg})
-        messages.append({"role": "assistant", "content": assistant_msg})
+    for msg in history:
+        messages.append({"role": msg["role"], "content": msg["content"]})
     
     messages.append({"role": "user", "content": message})
     
     # Call the model
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Good balance of speed/cost/capability
+        model=MODEL,
         messages=messages,
         tools=tools,
         tool_choice="auto"
@@ -257,7 +262,7 @@ def chat(message: str, history: list) -> str:
         
         # Get the next response
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL,
             messages=messages,
             tools=tools,
             tool_choice="auto"
@@ -287,17 +292,19 @@ examples = [
     "Any patterns in my data?",
 ]
 
-with gr.Blocks(css=css, title="Personal Tracker") as app:
+with gr.Blocks(title="Personal Tracker") as app:
     gr.Markdown("# 🗃️ Personal Database Assistant")
     gr.Markdown("Track anything with natural language. I'll handle the database.")
-    
+
     chatbot = gr.ChatInterface(
         fn=chat,
         examples=examples,
-        retry_btn=None,
-        undo_btn="↩️ Undo",
-        clear_btn="🗑️ Clear",
     )
 
 if __name__ == "__main__":
-    app.launch(server_name="0.0.0.0", server_port=7860)
+    app.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        css=css,
+        auth=(os.environ.get("AUTH_USERNAME", "admin"), os.environ.get("AUTH_PASSWORD")),
+    )
