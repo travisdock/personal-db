@@ -1,0 +1,31 @@
+service: personal-db
+
+image: travisdock/personal-db
+
+servers:
+  - 143.198.160.36
+
+proxy:
+  host: journal.travserve.net
+  app_port: 7860
+  ssl: true
+  healthcheck:
+    path: /
+
+
+registry:
+  server: localhost:5055
+
+builder:
+  arch: amd64
+
+volumes:
+  - "/app_storage/personal_db_storage:/usr/src/app/data"
+
+env:
+  secret:
+    - OPENAI_API_KEY
+    - OPENAI_BASE_URL
+    - OPENAI_MODEL
+    - AUTH_USERNAME
+    - AUTH_PASSWORD
