@@ -218,19 +218,22 @@ def handle_tool_call(tool_name: str, arguments: dict) -> str:
 
 def chat(message: str, history: list) -> str:
     """Main chat function for Gradio."""
-    
+
     # Build messages with current timestamp
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S (%A)")
     system = SYSTEM_PROMPT.format(current_time=current_time)
-    
+
     messages = [{"role": "system", "content": system}]
-    
+
     # Add conversation history
     for msg in history:
         messages.append({"role": msg["role"], "content": msg["content"]})
-    
+
     messages.append({"role": "user", "content": message})
-    
+
+    # Track tool usage for display
+    tool_log = []
+
     # Call the model
     response = client.chat.completions.create(
         model=MODEL,
@@ -238,18 +241,24 @@ def chat(message: str, history: list) -> str:
         tools=tools,
         tool_choice="auto"
     )
-    
+
     assistant_message = response.choices[0].message
-    
+
     # Handle tool calls in a loop (model might chain multiple calls)
     while assistant_message.tool_calls:
         # Process each tool call
         for tool_call in assistant_message.tool_calls:
             func_name = tool_call.function.name
             func_args = json.loads(tool_call.function.arguments)
-            
+
+            # Log the tool call
+            if func_name == "execute_sql":
+                tool_log.append(f"🔧 **{func_name}**: `{func_args.get('sql', '')}`")
+            else:
+                tool_log.append(f"🔧 **{func_name}**")
+
             result = handle_tool_call(func_name, func_args)
-            
+
             # Add the assistant's tool call and the result to messages
             messages.append({
                 "role": "assistant",
@@ -260,7 +269,7 @@ def chat(message: str, history: list) -> str:
                 "tool_call_id": tool_call.id,
                 "content": result
             })
-        
+
         # Get the next response
         response = client.chat.completions.create(
             model=MODEL,
@@ -269,7 +278,12 @@ def chat(message: str, history: list) -> str:
             tool_choice="auto"
         )
         assistant_message = response.choices[0].message
-    
+
+    # Prepend tool log to response if any tools were used
+    if tool_log:
+        tool_summary = "\n".join(tool_log)
+        return f"<details><summary>🛠️ Tool Usage ({len(tool_log)} calls)</summary>\n\n{tool_summary}\n\n</details>\n\n{assistant_message.content}"
+
     return assistant_message.content
 
 # =============================================================================
