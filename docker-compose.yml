@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    volumes:
+      - db-data:/usr/src/app/data
+    restart: unless-stopped
+
+volumes:
+  db-data:

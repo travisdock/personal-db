@@ -18,7 +18,8 @@ client = OpenAI(
     base_url=os.getenv("OPENAI_BASE_URL"),  # None uses default OpenAI URL
 )
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-DB_PATH = "personal.db"
+DB_PATH = "data/personal.db"
+os.makedirs("data", exist_ok=True)
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
