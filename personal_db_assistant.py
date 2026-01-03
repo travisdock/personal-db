@@ -303,9 +303,14 @@ with gr.Blocks(title="Personal Tracker") as app:
     )
 
 if __name__ == "__main__":
+    # Only enable auth if both username and password are set
+    auth = None
+    if os.environ.get("AUTH_USERNAME") and os.environ.get("AUTH_PASSWORD"):
+        auth = (os.environ["AUTH_USERNAME"], os.environ["AUTH_PASSWORD"])
+
     app.launch(
         server_name="0.0.0.0",
         server_port=7860,
         css=css,
-        auth=(os.environ.get("AUTH_USERNAME", "admin"), os.environ.get("AUTH_PASSWORD")),
+        auth=auth,
     )
